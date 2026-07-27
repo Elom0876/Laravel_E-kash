@@ -33,10 +33,10 @@ class Depense extends Model
     {
         return $this->belongsTo(Caisse::class);
     }
-
-    public function enregistrePar(): BelongsTo
+    
+    public function preuve_depense():BelongsTo
     {
-        return $this->belongsTo(Administrateur::class, 'enregistre_par');
+        return $this->belongsTo(Preuve_depense::class);
     }
 
     public function historique(): MorphMany

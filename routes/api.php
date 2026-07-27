@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DemandeController;
 use App\Http\Controllers\RapportController;
 use App\Http\Controllers\EmpruntController;
+use App\Http\Controllers\CaisseController;
 
 // Routes publiques (pas besoin d'être connecté)
 Route::post('/register', [AuthController::class, 'register']);
@@ -16,19 +17,34 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
-    // Réservé aux demandeurs (commerciaux, techniciens)
     Route::middleware('role:demandeur')->group(function () {
         Route::post('/demandes', [DemandeController::class, 'store']);
+        Route::post('/demandes/{demande}/preuve', [DemandeController::class, 'soumettrePreuve']);
     });
 
-    // Réservé au gestionnaire (assistante de direction)
     Route::middleware('role:gestionnaire')->group(function () {
-        Route::post('/demandes/{id}/valider', [DemandeController::class, 'valider']);
-        Route::post('/emprunts', [EmpruntController::class, 'store']);
+        Route::get('/demandes/en-attente', [DemandeController::class, 'enAttente']);
+        Route::post('/demandes/{demande}/valider', [DemandeController::class, 'valider']);
+        Route::post('/demandes/{demande}/rejeter', [DemandeController::class, 'rejeter']);
     });
 
     // Réservé au superviseur / direction (+ gestionnaire pour les rapports)
     Route::middleware('role:superviseur,gestionnaire')->group(function () {
         Route::get('/rapports', [RapportController::class, 'index']);
+    });
+    Route::middleware('role:gestionnaire')->group(function () {
+        Route::get('/emprunts', [EmpruntController::class, 'index']);
+        Route::post('/emprunts', [EmpruntController::class, 'store']);
+        Route::post('/emprunts/{emprunt}/rembourser', [EmpruntController::class, 'rembourser']);
+        Route::post('/caisses/{caisse}/approvisionner', [CaisseController::class, 'approvisionner']);
+    });
+
+    Route::middleware('role:superviseur,gestionnaire')->group(function () {
+        Route::get('/caisses', [CaisseController::class, 'index']);
+        Route::get('/caisses/{caisse}', [CaisseController::class, 'show']);
+    });
+    Route::middleware('role:superviseur,gestionnaire')->group(function () {
+        Route::get('/rapports', [RapportController::class, 'index']);
+        Route::get('/rapports/tableau-de-bord', [RapportController::class, 'tableauDeBord']);
     });
 });

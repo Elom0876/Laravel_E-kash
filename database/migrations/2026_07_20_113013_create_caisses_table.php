@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('nom');
             $table->foreignId('entreprise_id')->constrained('entreprises')->onDelete('cascade');
-            $table->string('solde', 9)->index();
+            $table->string('solde', 12)->index();
             $table->timestamps();
         });
     }

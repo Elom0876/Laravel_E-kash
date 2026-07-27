@@ -55,7 +55,7 @@ class AuthController extends Controller
                 'email' => ['Identifiants incorrects.'],
             ]);
         }
-
+            
         $user->load('poste', 'entreprise');
 
         return response()->json([

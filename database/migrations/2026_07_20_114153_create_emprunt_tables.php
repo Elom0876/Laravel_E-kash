@@ -14,7 +14,12 @@ return new class extends Migration
         Schema::create('emprunt_tables', function (Blueprint $table) {
             $table->id();
             $table->string('montant', 12)->index();
+            $table->foreignId('caisse_pretteuse_id')->constrained('caisses')->cascadeOnDelete();
+            $table->foreignId('caisse_passeuse_id')->constrained('caisses')->cascadeOnDelete();
+            $table->string('motif');
+            $table->enum('statut', ['en cours', 'rembourse'])->default('en cours');
             $table->timestamps();
+            $table->timestamp('rembourse_at')->nullable();
         });
     }
 

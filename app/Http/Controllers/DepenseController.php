@@ -47,4 +47,5 @@ class DepenseController extends Controller
     {
         //
     }
+    
 }

@@ -13,7 +13,9 @@ return new class extends Migration
             $table->foreignId('demande_id')->unique()->constrained('demandes')->cascadeOnDelete();
             $table->foreignId('caisse_id')->constrained('caisses')->cascadeOnDelete();
             $table->decimal('montant_reel', 12, 2);
-            $table->foreignId('enregistre_par')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('users')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('soumis_par')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('verifie_par')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('date_depense')->useCurrent();
             $table->timestamps();
         });

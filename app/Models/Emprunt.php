@@ -39,11 +39,6 @@ class Emprunt extends Model
         return $this->belongsTo(Caisse::class, 'caisse_emprunteuse_id');
     }
 
-    public function creePar(): BelongsTo
-    {
-        return $this->belongsTo(Administrateur::class, 'created_by');
-    }
-
     public function historique(): MorphMany
     {
         return $this->morphMany(Historique::class, 'mouvement');

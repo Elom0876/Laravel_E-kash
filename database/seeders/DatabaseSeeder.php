@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\Poste;
+use App\Models\Entreprise;
 
 
 class DatabaseSeeder extends Seeder
@@ -26,6 +28,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             EntrepriseSeeder::class,
             PosteSeeder::class,
+            UserSeeder::class,
         ]);
     }
 }

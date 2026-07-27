@@ -14,9 +14,9 @@ return new class extends Migration
             $table->string('chemin_fichier');
             $table->decimal('montant_declare', 12, 2);
             $table->foreignId('soumis_par')->constrained('demandeurs')->cascadeOnDelete();
+            $table->foreignId('verifie_par')->nullable()->constrained('administrateurs')->nullOnDelete();
             $table->timestamp('soumis_at')->useCurrent();
             $table->string('statut')->default('en_attente_verification');
-            $table->foreignId('verifie_par')->nullable()->constrained('administrateurs')->nullOnDelete();
             $table->timestamp('verifie_at')->nullable();
             $table->text('commentaire')->nullable();
             $table->timestamps();
