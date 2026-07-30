@@ -13,8 +13,8 @@ return new class extends Migration
             $table->foreignId('demande_id')->constrained('demandes')->cascadeOnDelete();
             $table->string('chemin_fichier');
             $table->decimal('montant_declare', 12, 2);
-            $table->foreignId('soumis_par')->constrained('demandeurs')->cascadeOnDelete();
-            $table->foreignId('verifie_par')->nullable()->constrained('administrateurs')->nullOnDelete();
+            $table->foreignId('soumis_par')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('verifie_par')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('soumis_at')->useCurrent();
             $table->string('statut')->default('en_attente_verification');
             $table->timestamp('verifie_at')->nullable();

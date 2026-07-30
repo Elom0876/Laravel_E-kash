@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+
+
 class Preuve_depense extends Model
 {
     protected $fillable = [
@@ -25,11 +27,11 @@ class Preuve_depense extends Model
 
     public function soumisPar()
     {
-        return $this->belongsTo(Demandeur::class, 'soumis_par');
+        return $this->belongsTo(User::class, 'soumis_par');
     }
 
     public function verifiePar()
     {
-        return $this->belongsTo(Administrateur::class, 'verifie_par');
+        return $this->belongsTo(User::class, 'verifie_par');
     }
 }

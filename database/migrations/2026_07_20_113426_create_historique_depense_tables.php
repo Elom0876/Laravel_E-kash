@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('historique_tables', function (Blueprint $table) {
             $table->id();
             $table->foreignId('demande_id')->constrained('demandes')->onDelete('cascade');
-            $table->foreignId('casse_id')->constrained('casses')->onDelete('cascade');
+            $table->foreignId('caisse_id')->constrained('caisses')->onDelete('cascade');
             $table->enum('sens', ['entree', 'sortie']);
             $table->string('type');
             $table->string('montant', 12)->index();
