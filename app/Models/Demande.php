@@ -8,24 +8,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Demande extends Model
 {
-    protected $table = 'demandes' ;
+    protected $table = 'demandes';
 
     protected $fillale = [
-      'demandeur_id',
-      'administrateur_id',
-      'motif',
-      'montant',
-      'motif_refus',
-      ''
+        'demandeur_id',
+        'administrateur_id',
+        'motif',
+        'montant',
+        'motif_refus',
+        ''
     ];
 
     public function demandeur(): BelongsTo
     {
-        return $this->belongTo(Demandeur::class, 'demandeur_id');
+        return $this->belongsTo(User::class, 'demandeur_id');
     }
     public function administrateur(): BelongsTo
     {
-        return $this->belongsTo(Administrateur::class, 'administrateur_id');
+        return $this->belongsTo(User::class, 'administrateur_id');
     }
     public function caisse(): BelongsTo
     {
