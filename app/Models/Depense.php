@@ -14,13 +14,13 @@ class Depense extends Model
     protected $fillable = [
         'demande_id',
         'caisse_id',
-        'montant',
+        'montant_reel',
         'enregistre_par',
         'date_depense',
     ];
 
     protected $casts = [
-        'montant' => 'index',
+        'montant_reel' => 'decimal:2',
         'date_depense' => 'datetime',
     ];
 
@@ -32,11 +32,6 @@ class Depense extends Model
     public function caisse(): BelongsTo
     {
         return $this->belongsTo(Caisse::class);
-    }
-    
-    public function preuve_depense():BelongsTo
-    {
-        return $this->belongsTo(Preuve_depense::class);
     }
 
     public function historique(): MorphMany

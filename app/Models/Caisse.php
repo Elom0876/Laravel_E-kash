@@ -13,11 +13,11 @@ class Caisse extends Model
 
     protected $fillable = [
         'entreprise_id',
+        'nom',
         'solde',
     ];
-
     protected $casts = [
-        'solde' => 'index',
+        'solde' => 'decimal:2',
     ];
 
     public function entreprise(): BelongsTo
@@ -37,7 +37,7 @@ class Caisse extends Model
 
     public function depenses(): HasMany
     {
-        return $this->hasMany(Demande::class);
+        return $this->hasMany(Depense::class);
     }
 
     public function historique(): HasMany
