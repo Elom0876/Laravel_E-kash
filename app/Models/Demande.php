@@ -10,22 +10,22 @@ class Demande extends Model
 {
     protected $table = 'demandes';
 
-    protected $fillale = [
-        'demandeur_id',
-        'administrateur_id',
+    protected $fillable = [
+        'user_id',
+        'entreprise_id',
         'motif',
-        'montant',
-        'motif_refus',
-        ''
+        'montant_estime',
+        'statut',
+
     ];
 
     public function demandeur(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'demandeur_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
     public function administrateur(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'administrateur_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
     public function caisse(): BelongsTo
     {

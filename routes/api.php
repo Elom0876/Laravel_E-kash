@@ -19,6 +19,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:demandeur')->group(function () {
         Route::post('/demandes', [DemandeController::class, 'store']);
+        Route::get('/demandes/mes-demandes', [DemandeController::class, 'mesDemandes']);
         Route::post('/demandes/{demande}/preuve', [DemandeController::class, 'soumettrePreuve']);
     });
 
