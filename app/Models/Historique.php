@@ -33,7 +33,7 @@ class Historique extends Model
 
     public function creePar(): BelongsTo
     {
-        return $this->belongsTo(Administrateur::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
 

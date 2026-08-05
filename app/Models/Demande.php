@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Demande extends Model
 {
@@ -13,26 +13,28 @@ class Demande extends Model
     protected $fillable = [
         'user_id',
         'entreprise_id',
-        'motif',
+        'motif',po
         'montant_estime',
         'statut',
-
     ];
 
-    public function demandeur(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
-    public function administrateur(): BelongsTo
+
+    public function entreprise(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(Entreprise::class);
     }
-    public function caisse(): BelongsTo
+
+    public function depense(): HasOne
     {
-        return $this->belongsTo(Caisse::class, 'caisse_id');
+        return $this->hasOne(Depense::class);
     }
-    public function notification(): HasMany
+
+    public function preuve(): HasOne
     {
-        return $this->hasMany(Notification::class, 'demande_id');
+        return $this->hasOne(Preuve_depense::class);
     }
 }
