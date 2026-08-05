@@ -5,9 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 
-
 class Preuve_depense extends Model
 {
+    protected $table = 'preuves_depenses';
     protected $fillable = [
         'demande_id',
         'chemin_fichier',

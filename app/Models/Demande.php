@@ -13,7 +13,7 @@ class Demande extends Model
     protected $fillable = [
         'user_id',
         'entreprise_id',
-        'motif',po
+        'motif',
         'montant_estime',
         'statut',
     ];
