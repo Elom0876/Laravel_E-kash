@@ -161,7 +161,7 @@ class DemandeController extends Controller
 
         $validated = $request->validate([
             'montant_reel' => 'required|numeric|min:0',
-            'preuve' => 'required|image|max:5120',
+            'preuve' => 'required|mimes:jpg,jpeg,png,pdf|max:5120',
         ]);
 
         $chemin = $request->file('preuve')->store('preuves', 'public');
