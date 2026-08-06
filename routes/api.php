@@ -6,6 +6,8 @@ use App\Http\Controllers\DemandeController;
 use App\Http\Controllers\RapportController;
 use App\Http\Controllers\EmpruntController;
 use App\Http\Controllers\CaisseController;
+use App\Http\Controllers\Preuve_depenseController;
+
 
 // Routes publiques (pas besoin d'être connecté)
 Route::post('/register', [AuthController::class, 'register']);
@@ -18,16 +20,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
 
     Route::middleware('role:demandeur')->group(function () {
-        Route::post('/demandes', [DemandeController::class, 'store']);
-        Route::get('/demandes/mes-demandes', [DemandeController::class, 'mesDemandes']);
-        Route::post('/demandes/{demande}/preuve', [DemandeController::class, 'soumettrePreuve']);
-    });
+    Route::post('/demandes', [DemandeController::class, 'store']);
+    Route::get('/demandes/mes-demandes', [DemandeController::class, 'mesDemandes']);
+    Route::post('/demandes/{demande}/preuve', [DemandeController::class, 'soumettrePreuve']);
+});
 
-    Route::middleware('role:gestionnaire')->group(function () {
-        Route::get('/demandes/en-attente', [DemandeController::class, 'enAttente']);
-        Route::post('/demandes/{demande}/valider', [DemandeController::class, 'valider']);
-        Route::post('/demandes/{demande}/rejeter', [DemandeController::class, 'rejeter']);
-    });
+Route::middleware('role:gestionnaire')->group(function () {
+    Route::get('/demandes/en-attente', [DemandeController::class, 'enAttente']);
+    Route::post('/demandes/{demande}/accepter', [DemandeController::class, 'accepter']);
+    Route::post('/demandes/{demande}/rejeter', [DemandeController::class, 'rejeter']);
+
+    Route::get('/preuves/en-attente', [Preuve_depenseController::class, 'enAttente']);
+    Route::post('/preuves/{preuve}/valider', [Preuve_depenseController::class, 'valider']);
+    Route::post('/preuves/{preuve}/rejeter', [Preuve_depenseController::class, 'rejeter']);
+});
 
     // Réservé au superviseur / direction (+ gestionnaire pour les rapports)
     Route::middleware('role:superviseur,gestionnaire')->group(function () {

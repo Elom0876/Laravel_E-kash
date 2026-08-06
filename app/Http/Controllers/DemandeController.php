@@ -15,9 +15,21 @@ use Illuminate\Support\Facades\DB;
 
 class DemandeController extends Controller
 {
+    private const STATUTS_ACTIFS = ['en_attente', 'acceptee', 'preuve_envoyee'];
+
     // Le demandeur crée une nouvelle demande
     public function store(Request $request, WhatsappService $whatsapp)
     {
+        $demandeActive = Demande::where('user_id', $request->user()->id)
+            ->whereIn('statut', self::STATUTS_ACTIFS)
+            ->exists();
+
+        if ($demandeActive) {
+            return response()->json([
+                'message' => 'Vous avez déjà une demande active. Terminez-la avant d\'en créer une nouvelle.',
+            ], 422);
+        }
+
         $validated = $request->validate([
             'motif' => 'required|string|max:255',
             'montant_estime' => 'required|numeric|min:1',
@@ -31,7 +43,6 @@ class DemandeController extends Controller
             'statut' => 'en_attente',
         ]);
 
-        // Notifier tous les gestionnaires de la même entreprise
         $gestionnaires = User::whereHas('poste', fn($q) => $q->where('role', 'gestionnaire'))
             ->where('entreprise_id', $demande->entreprise_id)
             ->get();
@@ -43,7 +54,7 @@ class DemandeController extends Controller
                 $whatsapp->envoyer(
                     $gestionnaire->telephone_whatsapp,
                     'Nouvelle demande de ' . $demande->user->name . ' : ' . $demande->motif .
-                    ' (' . number_format($demande->montant_estime, 0, ',', ' ') . ' FCFA)'
+                        ' (' . number_format($demande->montant_estime, 0, ',', ' ') . ' FCFA)'
                 );
             }
         }
@@ -62,7 +73,7 @@ class DemandeController extends Controller
         return response()->json($demandes);
     }
 
-    // Le gestionnaire liste les demandes en attente
+    // Le gestionnaire liste les demandes à traiter
     public function enAttente()
     {
         $demandes = Demande::with('user', 'entreprise')
@@ -73,8 +84,8 @@ class DemandeController extends Controller
         return response()->json($demandes);
     }
 
-    // Le gestionnaire valide une demande
-    public function valider(Request $request, Demande $demande, WhatsappService $whatsapp)
+    // Le gestionnaire accepte : débloque l'argent (mission pas encore terminée)
+    public function accepter(Request $request, Demande $demande, WhatsappService $whatsapp)
     {
         if ($demande->statut !== 'en_attente') {
             return response()->json(['message' => 'Cette demande a déjà été traitée.'], 422);
@@ -84,13 +95,13 @@ class DemandeController extends Controller
 
         if ($caisse->solde < $demande->montant_estime) {
             return response()->json([
-                'message' => 'Solde insuffisant dans cette caisse. Un emprunt inter-caisses est nécessaire avant de valider.',
+                'message' => 'Solde insuffisant dans cette caisse. Un emprunt inter-caisses est nécessaire avant d\'accepter.',
                 'solde_disponible' => $caisse->solde,
             ], 422);
         }
 
         DB::transaction(function () use ($demande, $caisse, $request) {
-            $demande->update(['statut' => 'validee']);
+            $demande->update(['statut' => 'acceptee']);
 
             Depense::create([
                 'demande_id' => $demande->id,
@@ -107,17 +118,16 @@ class DemandeController extends Controller
         if ($demande->user->telephone_whatsapp) {
             $whatsapp->envoyer(
                 $demande->user->telephone_whatsapp,
-                'Votre demande "' . $demande->motif . '" a été validée. Vous pouvez retirer les fonds.'
+                'Votre demande "' . $demande->motif . '" a été acceptée. Vous pouvez retirer les fonds.'
             );
         }
 
         return response()->json([
-            'message' => 'Demande validée.',
+            'message' => 'Demande acceptée.',
             'demande' => $demande->fresh('depense'),
         ]);
     }
 
-    // Le gestionnaire rejette une demande
     public function rejeter(Request $request, Demande $demande, WhatsappService $whatsapp)
     {
         if ($demande->statut !== 'en_attente') {
@@ -131,14 +141,11 @@ class DemandeController extends Controller
         if ($demande->user->telephone_whatsapp) {
             $whatsapp->envoyer(
                 $demande->user->telephone_whatsapp,
-                'Votre demande "' . $demande->motif . '" a été rejetée.'
+                'Votre demande "' . $demande->motif . '" a été rejetée. Vous pouvez soumettre une nouvelle demande.'
             );
         }
 
-        return response()->json([
-            'message' => 'Demande rejetée.',
-            'demande' => $demande,
-        ]);
+        return response()->json(['message' => 'Demande rejetée.', 'demande' => $demande]);
     }
 
     // Le demandeur soumet la preuve après achat
@@ -148,39 +155,36 @@ class DemandeController extends Controller
             return response()->json(['message' => 'Accès non autorisé.'], 403);
         }
 
-        if ($demande->statut !== 'validee') {
-            return response()->json(['message' => 'Cette demande ne peut pas encore être justifiée.'], 422);
+        if (!in_array($demande->statut, ['acceptee', 'preuve_rejetee'])) {
+            return response()->json(['message' => 'Cette demande ne peut pas encore recevoir de preuve.'], 422);
         }
 
         $validated = $request->validate([
             'montant_reel' => 'required|numeric|min:0',
-            'preuve' => 'required|image|max:5120', // 5 Mo max
+            'preuve' => 'required|image|max:5120',
         ]);
 
         $chemin = $request->file('preuve')->store('preuves', 'public');
 
         DB::transaction(function () use ($demande, $validated, $chemin, $request) {
-            $depense = $demande->depense;
-            $ecart = $validated['montant_reel'] - $demande->montant_estime;
+            $demande->update(['statut' => 'preuve_envoyee']);
 
-            $depense->update(['montant_reel' => $validated['montant_reel']]);
-
-            if ($ecart !== 0.0) {
-                $depense->caisse()->decrement('solde', $ecart);
-            }
-
-            $demande->update(['statut' => 'justifiee']);
-
-            $demande->preuve()->create([
-                'chemin_fichier' => $chemin,
-                'montant_declare' => $validated['montant_reel'],
-                'soumis_par' => $request->user()->id,
-            ]);
+            $demande->preuve()->updateOrCreate(
+                ['demande_id' => $demande->id],
+                [
+                    'chemin_fichier' => $chemin,
+                    'montant_declare' => $validated['montant_reel'],
+                    'soumis_par' => $request->user()->id,
+                    'statut' => 'en_attente_verification',
+                ]
+            );
         });
+
+        // Notifier le gestionnaire ici si besoin (TODO)
 
         return response()->json([
             'message' => 'Preuve soumise avec succès.',
-            'demande' => $demande->fresh('depense', 'preuve'),
+            'demande' => $demande->fresh('preuve'),
         ]);
     }
 }

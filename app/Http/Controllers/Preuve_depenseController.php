@@ -2,49 +2,70 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Preuve_depense;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\Preuve_depense;
+use Illuminate\Support\Facades\DB;
 
 class Preuve_depenseController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    // Le gestionnaire liste les preuves à vérifier
+    public function enAttente()
     {
-        //
+        $preuves = Preuve_depense::with('demande.user', 'demande.entreprise', 'demande.depense')
+            ->where('statut', 'en_attente_verification')
+            ->latest()
+            ->get();
+
+        return response()->json($preuves);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    // Le gestionnaire valide la preuve
+    public function valider(Request $request, Preuve_depense $preuve)
     {
-        //
+        if ($preuve->statut !== 'en_attente_verification') {
+            return response()->json(['message' => 'Cette preuve a déjà été traitée.'], 422);
+        }
+
+        DB::transaction(function () use ($preuve, $request) {
+            $demande = $preuve->demande;
+            $depense = $demande->depense;
+
+            $ecart = $preuve->montant_declare - $demande->montant_estime;
+            if ($depense && $ecart != 0) {
+                $depense->update(['montant_reel' => $preuve->montant_declare]);
+                $depense->caisse()->decrement('solde', $ecart);
+            }
+
+            $preuve->update([
+                'statut' => 'valide',
+                'verifie_par' => $request->user()->id,
+                'verifie_at' => now(),
+            ]);
+
+            $demande->update(['statut' => 'terminee']);
+        });
+
+        $preuve->demande->user->notify(new \App\Notifications\DemandeValideeNotification($preuve->demande));
+
+        return response()->json(['message' => 'Preuve validée, mission terminée.']);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Preuve_depense $preuve_depense)
+    // Le gestionnaire rejette la preuve
+    public function rejeter(Request $request, Preuve_depense $preuve)
     {
-        //
-    }
+        if ($preuve->statut !== 'en_attente_verification') {
+            return response()->json(['message' => 'Cette preuve a déjà été traitée.'], 422);
+        }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Preuve_depense $preuve_depense)
-    {
-        //
-    }
+        $preuve->update([
+            'statut' => 'rejete',
+            'verifie_par' => $request->user()->id,
+            'verifie_at' => now(),
+            'commentaire' => $request->input('commentaire'),
+        ]);
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Preuve_depense $preuve_depense)
-    {
-        //
+        $preuve->demande->update(['statut' => 'preuve_rejetee']);
+
+        return response()->json(['message' => 'Preuve rejetée. Le demandeur doit en soumettre une nouvelle.']);
     }
 }

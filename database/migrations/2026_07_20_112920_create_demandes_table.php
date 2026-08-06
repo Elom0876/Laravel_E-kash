@@ -14,8 +14,14 @@ return new class extends Migration
             $table->foreignId('entreprise_id')->constrained('entreprises')->cascadeOnDelete();
             $table->string('motif');
             $table->decimal('montant_estime', 12, 2);
-            $table->enum('statut', ['brouillon', 'envoyee', 'en_attente', 'validee', 'rejetee', 'justifiee', 'cloturee'])
-                ->default('en_attente');
+            $table->enum('statut', [
+                'en_attente',
+                'acceptee',
+                'rejetee',
+                'preuve_envoyee',
+                'terminee',
+                'preuve_rejetee',
+            ])->default('en_attente');
             $table->timestamps();
         });
     }
