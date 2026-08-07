@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             EntrepriseSeeder::class,
             PosteSeeder::class,
             UserSeeder::class,
+            CaisseSeeder::class,
         ]);
     }
 }
