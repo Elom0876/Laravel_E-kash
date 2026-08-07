@@ -83,6 +83,19 @@ class DemandeController extends Controller
 
         return response()->json($demandes);
     }
+    public function historique()
+    {
+        $demandes = Demande::with([
+            'user',
+            'entreprise',
+            'depense',
+            'preuve',
+        ])
+            ->latest()
+            ->get();
+
+        return response()->json($demandes);
+    }
 
     // Le gestionnaire accepte : débloque l'argent (mission pas encore terminée)
     public function accepter(Request $request, Demande $demande, WhatsappService $whatsapp)
