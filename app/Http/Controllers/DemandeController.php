@@ -147,6 +147,30 @@ class DemandeController extends Controller
 
         return response()->json(['message' => 'Demande rejetée.', 'demande' => $demande]);
     }
+    public function validerSansPreuve(Request $request, Demande $demande)
+    {
+        if ($demande->statut !== 'acceptee') {
+            return response()->json([
+                'message' => 'Cette demande ne peut pas être validée directement.'
+            ], 422);
+        }
+
+        // On vérifie qu'il n'y a pas déjà une preuve en attente.
+        if ($demande->preuve) {
+            return response()->json([
+                'message' => 'Une preuve existe pour cette demande. Veuillez la traiter depuis les preuves en attente.'
+            ], 422);
+        }
+
+        $demande->update([
+            'statut' => 'terminee',
+        ]);
+
+        return response()->json([
+            'message' => 'Demande validée sans preuve. Mission terminée.',
+            'demande' => $demande->fresh('depense'),
+        ]);
+    }
 
     // Le demandeur soumet la preuve après achat
     public function soumettrePreuve(Request $request, Demande $demande)
@@ -179,6 +203,8 @@ class DemandeController extends Controller
                 ]
             );
         });
+
+
 
         // Notifier le gestionnaire ici si besoin (TODO)
 
