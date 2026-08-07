@@ -23,7 +23,7 @@ class Emprunt extends Model
     ];
 
     protected $casts = [
-        'montant' => 'index',
+        'montant' => 'decimal:2',
         'date_emprunt' => 'datetime',
         'date_remboursement' => 'datetime',
     ];
