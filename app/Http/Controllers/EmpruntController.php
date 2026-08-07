@@ -17,6 +17,7 @@ class EmpruntController extends Controller
             'caisse_emprunteuse_id' => 'required|exists:caisses,id',
             'montant' => 'required|numeric|min:1',
             'motif' => 'required|string|max:255',
+
         ]);
 
         $caissePreteuse = Caisse::findOrFail($validated['caisse_preteuse_id']);
@@ -33,6 +34,7 @@ class EmpruntController extends Controller
                 ...$validated,
                 'enregistre_par' => $request->user()->id,
                 'statut' => 'en_cours',
+                'date_emprunt' => now(),
             ]);
 
             $caissePreteuse->decrement('solde', $validated['montant']);
@@ -71,6 +73,8 @@ class EmpruntController extends Controller
             $emprunt->update([
                 'statut' => 'rembourse',
                 'rembourse_at' => now(),
+                'date_remboursement' => now(),
+
             ]);
         });
 

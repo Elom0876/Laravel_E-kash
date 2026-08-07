@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('montant', 12)->index();
             $table->foreignId('caisse_pretteuse_id')->constrained('caisses')->cascadeOnDelete();
-            $table->foreignId('caisse_passeuse_id')->constrained('caisses')->cascadeOnDelete();
+            $table->foreignId('caisse_emprunteuse_id')->constrained('caisses')->cascadeOnDelete();
             $table->string('motif');
             $table->enum('statut', ['en cours', 'rembourse'])->default('en cours');
             $table->timestamps();
