@@ -77,7 +77,7 @@ class DemandeController extends Controller
     public function enAttente()
     {
         $demandes = Demande::with('user', 'entreprise')
-            ->where('statut', 'en_attente')
+            ->whereIn('statut', ['en_attente', 'acceptee'])
             ->latest()
             ->get();
 
