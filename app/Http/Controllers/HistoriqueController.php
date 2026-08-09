@@ -47,4 +47,5 @@ class HistoriqueController extends Controller
     {
         //
     }
+    
 }

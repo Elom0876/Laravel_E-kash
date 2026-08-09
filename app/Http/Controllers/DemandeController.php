@@ -68,18 +68,17 @@ class DemandeController extends Controller
         $demandes = Demande::with('depense', 'preuve')
             ->where('user_id', $request->user()->id)
             ->latest()
-            ->get();
+            ->paginate(10); // 10 demandes par page
 
         return response()->json($demandes);
     }
-
     // Le gestionnaire liste les demandes à traiter
     public function enAttente()
     {
         $demandes = Demande::with('user', 'entreprise')
             ->whereIn('statut', ['en_attente', 'acceptee'])
             ->latest()
-            ->get();
+            ->paginate(20); // Pagination pour éviter de surcharger la réponse
 
         return response()->json($demandes);
     }
@@ -92,7 +91,7 @@ class DemandeController extends Controller
             'preuve',
         ])
             ->latest()
-            ->get();
+            ->paginate(10);
 
         return response()->json($demandes);
     }
