@@ -14,14 +14,15 @@ use App\Http\Controllers\PosteController;
 
 // Routes publiques (pas besoin d'être connecté)
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/mot-de-passe/oublie', [AuthController::class, 'motDePasseOublie']);
+Route::post('/mot-de-passe/reinitialiser', [AuthController::class, 'reinitialiserMotDePasse']);
 
 // Routes protégées (utilisateur connecté requis)
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/mot-de-passe/oublie', [AuthController::class, 'motDePasseOublie']);
-    Route::post('/mot-de-passe/reinitialiser', [AuthController::class, 'reinitialiserMotDePasse']);
+
 
     Route::middleware('role:demandeur')->group(function () {
         Route::post('/demandes', [DemandeController::class, 'store']);

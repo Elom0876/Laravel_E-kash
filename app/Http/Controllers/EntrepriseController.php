@@ -3,21 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\Entreprise;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
 class EntrepriseController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Liste des entreprises.
      */
     public function index()
     {
-        //
+        $entreprises = Entreprise::orderBy('nom')->get();
+
+        return response()->json($entreprises);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Créer une entreprise.
      */
     public function store(Request $request)
     {
@@ -31,27 +32,29 @@ class EntrepriseController extends Controller
         return response()->json($entreprise, 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Entreprise $entreprise)
     {
-        //
+        return response()->json($entreprise);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Entreprise $entreprise)
     {
-        //
+        $validated = $request->validate([
+            'nom' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|unique:entreprises,slug,' . $entreprise->id . '|alpha_dash',
+        ]);
+
+        $entreprise->update($validated);
+
+        return response()->json($entreprise);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Entreprise $entreprise)
     {
-        //
+        $entreprise->delete();
+
+        return response()->json([
+            'message' => 'Entreprise supprimée.'
+        ]);
     }
 }
