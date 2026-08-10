@@ -1,31 +1,25 @@
 <?php
 
-namespace App\Notifications;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Notifications\Messages\MailMessage;
-
-class ReinitialisationMotDePasseNotification extends Notification
+return new class extends Migration
 {
-    use Queueable;
-
-    public function __construct(protected string $token) {}
-
-    public function via(object $notifiable): array
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
     {
-        return ['mail'];
+        Schema::table('users', function (Blueprint $table) {
+            $table->timestamp('password_set_at')->nullable();
+        });
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function down(): void
     {
-        $url = rtrim(config('app.frontend_url'), '/') . '/definir-mot-de-passe?token=' . $this->token . '&email=' . urlencode($notifiable->email);
-
-        return (new MailMessage)
-            ->subject('Définissez votre mot de passe — E-kash')
-            ->greeting('Bonjour ' . $notifiable->name)
-            ->line('Un compte E-kash a été créé pour vous.')
-            ->action('Définir mon mot de passe', $url)
-            ->line('Ce lien expire dans 60 minutes.');
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('password_set_at');
+        });
     }
-}
+};
