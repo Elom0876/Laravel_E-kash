@@ -71,7 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/entreprises', [EntrepriseController::class, 'store']);
         Route::post('/caisses', [CaisseController::class, 'store']);
         Route::get('/entreprises', [EntrepriseController::class, 'index']);
-        Route::get('/postes/', [PosteController::class, 'index']);
+        Route::get('/postes', [PosteController::class, 'index']);
     });
     Route::middleware('role:gestionnaire,superviseur')->group(function () {
 
