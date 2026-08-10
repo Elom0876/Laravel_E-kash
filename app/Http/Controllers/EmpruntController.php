@@ -72,9 +72,7 @@ class EmpruntController extends Controller
 
             $emprunt->update([
                 'statut' => 'rembourse',
-                'rembourse_at' => now(),
                 'date_remboursement' => now(),
-
             ]);
         });
 

@@ -19,7 +19,7 @@ class Emprunt extends Model
         'statut',
         'date_emprunt',
         'date_remboursement',
-        'created_by',
+        'enregistre_par',
     ];
 
     protected $casts = [
@@ -42,5 +42,9 @@ class Emprunt extends Model
     public function historique(): MorphMany
     {
         return $this->morphMany(Historique::class, 'mouvement');
+    }
+    public function enregistrePar(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'enregistre_par');
     }
 }
