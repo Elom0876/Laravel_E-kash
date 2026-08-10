@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:superviseur,gestionnaire')->group(function () {
         Route::get('/caisses', [CaisseController::class, 'index']);
         Route::get('/caisses/{caisse}', [CaisseController::class, 'show']);
+        Route::get('/demandes/historique', [DemandeController::class, 'historique']);
     });
     Route::middleware('role:superviseur,gestionnaire')->group(function () {
         Route::get('/rapports', [RapportController::class, 'index']);
