@@ -9,6 +9,7 @@ use App\Http\Controllers\CaisseController;
 use App\Http\Controllers\Preuve_depenseController;
 use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PosteController;
 
 
 // Routes publiques (pas besoin d'être connecté)
@@ -69,6 +70,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:gestionnaire,superviseur')->group(function () {
         Route::post('/entreprises', [EntrepriseController::class, 'store']);
         Route::post('/caisses', [CaisseController::class, 'store']);
+        Route::get('/entreprises', [EntrepriseController::class, 'index']);
+        Route::get('/postes/', [PosteController::class, 'index']);
     });
     Route::middleware('role:gestionnaire,superviseur')->group(function () {
 
