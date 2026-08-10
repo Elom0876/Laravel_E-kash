@@ -18,6 +18,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/mot-de-passe/oublie', [AuthController::class, 'motDePasseOublie']);
+    Route::post('/mot-de-passe/reinitialiser', [AuthController::class, 'reinitialiserMotDePasse']);
 
     Route::middleware('role:demandeur')->group(function () {
         Route::post('/demandes', [DemandeController::class, 'store']);
