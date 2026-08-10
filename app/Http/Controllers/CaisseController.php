@@ -42,4 +42,20 @@ class CaisseController extends Controller
 
         return response()->json(['message' => 'Caisse approvisionnée.', 'caisse' => $caisse->fresh()]);
     }
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'entreprise_id' => 'required|exists:entreprises,id|unique:caisses,entreprise_id',
+            'nom' => 'required|string|max:255',
+            'solde' => 'nullable|numeric|min:0',
+        ]);
+
+        $caisse = Caisse::create([
+            'entreprise_id' => $validated['entreprise_id'],
+            'nom' => $validated['nom'],
+            'solde' => $validated['solde'] ?? 0,
+        ]);
+
+        return response()->json($caisse, 201);
+    }
 }

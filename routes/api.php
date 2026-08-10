@@ -7,10 +7,10 @@ use App\Http\Controllers\RapportController;
 use App\Http\Controllers\EmpruntController;
 use App\Http\Controllers\CaisseController;
 use App\Http\Controllers\Preuve_depenseController;
+use App\Http\Controllers\EntrepriseController;
 
 
 // Routes publiques (pas besoin d'être connecté)
-Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // Routes protégées (utilisateur connecté requis)
@@ -61,5 +61,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/rapports/tableau-de-bord', [RapportController::class, 'tableauDeBord']);
         Route::get('/rapports/export/pdf', [RapportController::class, 'exporterPdf']);
         Route::get('/rapports/export/excel', [RapportController::class, 'exporterExcel']);
+    });
+    Route::middleware('role:gestionnaire,superviseur')->group(function () {
+        Route::post('/entreprises', [EntrepriseController::class, 'store']);
+        Route::post('/caisses', [CaisseController::class, 'store']);
     });
 });

@@ -8,6 +8,9 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use App\Models\User;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -55,7 +58,7 @@ class AuthController extends Controller
                 'email' => ['Identifiants incorrects.'],
             ]);
         }
-            
+
         $user->load('poste', 'entreprise');
 
         return response()->json([
@@ -78,5 +81,40 @@ class AuthController extends Controller
             'user' => $request->user()->load('poste', 'entreprise'),
             'role' => $request->user()->role,
         ]);
+    }
+    public function motDePasseOublie(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $statut = Password::sendResetLink($request->only('email'));
+
+        return $statut === Password::RESET_LINK_SENT
+            ? response()->json(['message' => 'Lien de réinitialisation envoyé par email.'])
+            : response()->json(['message' => 'Impossible d\'envoyer le lien.'], 422);
+    }
+
+    public function reinitialiserMotDePasse(Request $request)
+    {
+        $validated = $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|min:6|confirmed',
+        ]);
+
+        $statut = Password::reset(
+            $validated,
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                    'password_set_at' => now(),
+                ])->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        return $statut === Password::PASSWORD_RESET
+            ? response()->json(['message' => 'Mot de passe défini avec succès.'])
+            : response()->json(['message' => 'Token invalide ou expiré.'], 422);
     }
 }

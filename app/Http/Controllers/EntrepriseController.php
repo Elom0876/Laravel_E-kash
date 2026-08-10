@@ -21,7 +21,14 @@ class EntrepriseController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'nom' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|unique:entreprises,slug|alpha_dash',
+        ]);
+
+        $entreprise = Entreprise::create($validated);
+
+        return response()->json($entreprise, 201);
     }
 
     /**
