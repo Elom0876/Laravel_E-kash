@@ -6,13 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('demandes', function (Blueprint $table) {
-            $table->text('commentaire_validation')->nullable();
+            $table->text('commentaire_validation')->nullable()->after('statut');
         });
     }
 
