@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Caisse;
 use Illuminate\Http\Request;
+use App\Models\Approvisionnement;
+use Illuminate\Support\Facades\DB;
 
 class CaisseController extends Controller
 {
@@ -29,19 +31,7 @@ class CaisseController extends Controller
     }
 
     // Approvisionnement (entrée d'argent dans la caisse)
-    public function approvisionner(Request $request, Caisse $caisse)
-    {
-        $validated = $request->validate([
-            'montant' => 'required|numeric|min:1',
-            'motif' => 'nullable|string|max:255',
-        ]);
 
-        $caisse->increment('solde', $validated['montant']);
-
-        // TODO : enregistrer ce mouvement dans ta table 'approvionnements'
-
-        return response()->json(['message' => 'Caisse approvisionnée.', 'caisse' => $caisse->fresh()]);
-    }
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -62,5 +52,37 @@ class CaisseController extends Controller
     {
         $caisses = Caisse::where('entreprise_id', $entrepriseId)->get();
         return response()->json($caisses);
+    }
+    public function approvisionner(Request $request, Caisse $caisse)
+    {
+        $validated = $request->validate([
+            'montant' => 'required|numeric|min:1',
+            'motif' => 'nullable|string|max:255',
+        ]);
+
+        DB::transaction(function () use ($caisse, $validated, $request) {
+            Approvisionnement::create([
+                'caisse_id' => $caisse->id,
+                'montant' => $validated['montant'],
+                'motif' => $validated['motif'] ?? null,
+                'enregistre_par' => $request->user()->id,
+            ]);
+
+            $caisse->increment('solde', $validated['montant']);
+        });
+
+        return response()->json([
+            'message' => 'Caisse approvisionnée.',
+            'caisse' => $caisse->fresh(),
+        ]);
+    }
+    public function historiqueApprovisionnements(Caisse $caisse)
+    {
+        $approvisionnements = $caisse->approvisionnements()
+            ->with('enregistrePar')
+            ->latest()
+            ->get();
+
+        return response()->json($approvisionnements);
     }
 }

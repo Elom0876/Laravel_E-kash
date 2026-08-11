@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Approisionnement;
+use App\Models\Approvisionnement;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -27,7 +27,7 @@ class ApprovisionnementController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Approisionnement $approisionnement)
+    public function show(Approvisionnement $approisionnement)
     {
         //
     }
@@ -35,7 +35,7 @@ class ApprovisionnementController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Approisionnement $approisionnement)
+    public function update(Request $request, Approvisionnement $approisionnement)
     {
         //
     }
@@ -43,7 +43,7 @@ class ApprovisionnementController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Approisionnement $approisionnement)
+    public function destroy(Approvisionnement $approisionnement)
     {
         //
     }
