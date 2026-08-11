@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('approvionnements', function (Blueprint $table) {
+        Schema::create('approvisionnements', function (Blueprint $table) {
             $table->id();
-            $table->string('montant', 12)->index();
             $table->foreignId('caisse_id')->constrained('caisses')->onDelete('cascade');
+            $table->string('montant', 12)->index();
+            $table->string('motif')->nullable();
+            $table->foreignId('enregistre_par')->constrained('users');
             $table->timestamps();
         });
     }
@@ -24,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('approvionnements');
+        Schema::dropIfExists('approvisionnements');
     }
 };
