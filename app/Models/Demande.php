@@ -16,6 +16,7 @@ class Demande extends Model
         'motif',
         'montant_estime',
         'statut',
+        'commentaire_validation',
     ];
 
     public function user(): BelongsTo

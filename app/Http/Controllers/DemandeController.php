@@ -105,11 +105,12 @@ class DemandeController extends Controller
 
         $validated = $request->validate([
             'caisse_id' => 'required|exists:caisses,id',
+            'sans_preuve' => 'nullable|boolean',
+            'commentaire_validation' => 'required_if:sans_preuve,true|string|max:1000',
         ]);
 
         $caisse = Caisse::findOrFail($validated['caisse_id']);
 
-        // Sécurité : vérifie que la caisse choisie appartient bien à l'entreprise du demandeur
         if ($caisse->entreprise_id !== $demande->entreprise_id) {
             return response()->json([
                 'message' => 'Cette caisse n\'appartient pas à l\'entreprise du demandeur.',
@@ -123,9 +124,9 @@ class DemandeController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($demande, $caisse, $request) {
-            $demande->update(['statut' => 'acceptee']);
+        $sansPreuve = $request->boolean('sans_preuve');
 
+        DB::transaction(function () use ($demande, $caisse, $request, $sansPreuve, $validated) {
             Depense::create([
                 'demande_id' => $demande->id,
                 'caisse_id' => $caisse->id,
@@ -134,19 +135,25 @@ class DemandeController extends Controller
             ]);
 
             $caisse->decrement('solde', $demande->montant_estime);
+
+            $demande->update([
+                'statut' => $sansPreuve ? 'terminee' : 'acceptee',
+                'commentaire_validation' => $sansPreuve ? $validated['commentaire_validation'] : null,
+            ]);
         });
 
         $demande->user->notify(new DemandeValideeNotification($demande));
 
         if ($demande->user->telephone_whatsapp) {
-            $whatsapp->envoyer(
-                $demande->user->telephone_whatsapp,
-                'Votre demande "' . $demande->motif . '" a été acceptée. Vous pouvez retirer les fonds.'
-            );
+            $message = $sansPreuve
+                ? 'Votre demande "' . $demande->motif . '" a été acceptée et clôturée sans justificatif (validation exceptionnelle).'
+                : 'Votre demande "' . $demande->motif . '" a été acceptée. Vous pouvez retirer les fonds.';
+
+            $whatsapp->envoyer($demande->user->telephone_whatsapp, $message);
         }
 
         return response()->json([
-            'message' => 'Demande acceptée.',
+            'message' => $sansPreuve ? 'Demande acceptée et clôturée sans preuve.' : 'Demande acceptée.',
             'demande' => $demande->fresh('depense'),
         ]);
     }
@@ -157,7 +164,7 @@ class DemandeController extends Controller
             return response()->json(['message' => 'Cette demande a déjà été traitée.'], 422);
         }
 
-        $demande->update(['statut' => 'rejetee']);
+        $demande->update(['statut' => 'rejetee', 'commentaire_validation' => $request->commentaire_validation]);
 
         $demande->user->notify(new DemandeRejeteeNotification($demande));
 
@@ -170,30 +177,7 @@ class DemandeController extends Controller
 
         return response()->json(['message' => 'Demande rejetée.', 'demande' => $demande]);
     }
-    public function validerSansPreuve(Request $request, Demande $demande)
-    {
-        if ($demande->statut !== 'acceptee') {
-            return response()->json([
-                'message' => 'Cette demande ne peut pas être validée directement.'
-            ], 422);
-        }
 
-        // On vérifie qu'il n'y a pas déjà une preuve en attente.
-        if ($demande->preuve) {
-            return response()->json([
-                'message' => 'Une preuve existe pour cette demande. Veuillez la traiter depuis les preuves en attente.'
-            ], 422);
-        }
-
-        $demande->update([
-            'statut' => 'terminee',
-        ]);
-
-        return response()->json([
-            'message' => 'Demande validée sans preuve. Mission terminée.',
-            'demande' => $demande->fresh('depense'),
-        ]);
-    }
 
     // Le demandeur soumet la preuve après achat
     public function soumettrePreuve(Request $request, Demande $demande)

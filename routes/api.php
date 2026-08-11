@@ -38,7 +38,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/preuves/en-attente', [Preuve_depenseController::class, 'enAttente']);
         Route::post('/preuves/{preuve}/valider', [Preuve_depenseController::class, 'valider']);
         Route::post('/preuves/{preuve}/rejeter', [Preuve_depenseController::class, 'rejeter']);
-        Route::post('/demandes/{demande}/valider-sans-preuve', [DemandeController::class, 'validerSansPreuve']);
         Route::get('/demandes/historique', [DemandeController::class, 'historique']);
     });
 
