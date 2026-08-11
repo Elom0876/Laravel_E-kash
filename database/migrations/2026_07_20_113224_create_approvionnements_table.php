@@ -6,24 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('approvisionnements', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('caisse_id')->constrained('caisses')->onDelete('cascade');
-            $table->string('montant', 12)->index();
+            $table->foreignId('caisse_id')->constrained('caisses')->cascadeOnDelete();
+            $table->decimal('montant', 12, 2);
             $table->string('motif')->nullable();
             $table->foreignId('enregistre_par')->constrained('users');
+            $table->timestamp('date_approvisionnement')->useCurrent();
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('approvisionnements');

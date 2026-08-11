@@ -66,6 +66,7 @@ class CaisseController extends Controller
                 'montant' => $validated['montant'],
                 'motif' => $validated['motif'] ?? null,
                 'enregistre_par' => $request->user()->id,
+                'date_approvisionnement' => now(),
             ]);
 
             $caisse->increment('solde', $validated['montant']);
