@@ -45,7 +45,7 @@ class CaisseController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'entreprise_id' => 'required|exists:entreprises,id|unique:caisses,entreprise_id',
+            'entreprise_id' => 'required|exists:entreprises,id', // "unique:caisses,entreprise_id" retiré
             'nom' => 'required|string|max:255',
             'solde' => 'nullable|numeric|min:0',
         ]);
@@ -57,5 +57,10 @@ class CaisseController extends Controller
         ]);
 
         return response()->json($caisse, 201);
+    }
+    public function parEntreprise(Request $request, $entrepriseId)
+    {
+        $caisses = Caisse::where('entreprise_id', $entrepriseId)->get();
+        return response()->json($caisses);
     }
 }

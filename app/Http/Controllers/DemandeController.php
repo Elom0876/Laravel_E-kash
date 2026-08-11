@@ -103,7 +103,18 @@ class DemandeController extends Controller
             return response()->json(['message' => 'Cette demande a déjà été traitée.'], 422);
         }
 
-        $caisse = Caisse::where('entreprise_id', $demande->entreprise_id)->firstOrFail();
+        $validated = $request->validate([
+            'caisse_id' => 'required|exists:caisses,id',
+        ]);
+
+        $caisse = Caisse::findOrFail($validated['caisse_id']);
+
+        // Sécurité : vérifie que la caisse choisie appartient bien à l'entreprise du demandeur
+        if ($caisse->entreprise_id !== $demande->entreprise_id) {
+            return response()->json([
+                'message' => 'Cette caisse n\'appartient pas à l\'entreprise du demandeur.',
+            ], 422);
+        }
 
         if ($caisse->solde < $demande->montant_estime) {
             return response()->json([
