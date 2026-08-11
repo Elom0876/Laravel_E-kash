@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:gestionnaire')->group(function () {
         Route::get('/demandes/en-attente', [DemandeController::class, 'enAttente']);
         Route::post('/demandes/{demande}/accepter', [DemandeController::class, 'accepter']);
+        Route::post('/demandes/{demande}/valider-sans-preuve', [DemandeController::class, 'validerSansPreuve']);
         Route::post('/demandes/{demande}/rejeter', [DemandeController::class, 'rejeter']);
 
         Route::get('/preuves/en-attente', [Preuve_depenseController::class, 'enAttente']);

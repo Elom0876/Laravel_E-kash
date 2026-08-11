@@ -97,6 +97,7 @@ class DemandeController extends Controller
     }
 
     // Le gestionnaire accepte : débloque l'argent (mission pas encore terminée)
+
     public function accepter(Request $request, Demande $demande, WhatsappService $whatsapp)
     {
         if ($demande->statut !== 'en_attente') {
@@ -105,8 +106,6 @@ class DemandeController extends Controller
 
         $validated = $request->validate([
             'caisse_id' => 'required|exists:caisses,id',
-            'sans_preuve' => 'nullable|boolean',
-            'commentaire_validation' => 'required_if:sans_preuve,true|string|max:1000',
         ]);
 
         $caisse = Caisse::findOrFail($validated['caisse_id']);
@@ -124,9 +123,9 @@ class DemandeController extends Controller
             ], 422);
         }
 
-        $sansPreuve = $request->boolean('sans_preuve');
+        DB::transaction(function () use ($demande, $caisse, $request) {
+            $demande->update(['statut' => 'acceptee']);
 
-        DB::transaction(function () use ($demande, $caisse, $request, $sansPreuve, $validated) {
             Depense::create([
                 'demande_id' => $demande->id,
                 'caisse_id' => $caisse->id,
@@ -135,25 +134,75 @@ class DemandeController extends Controller
             ]);
 
             $caisse->decrement('solde', $demande->montant_estime);
-
-            $demande->update([
-                'statut' => $sansPreuve ? 'terminee' : 'acceptee',
-                'commentaire_validation' => $sansPreuve ? $validated['commentaire_validation'] : null,
-            ]);
         });
 
         $demande->user->notify(new DemandeValideeNotification($demande));
 
         if ($demande->user->telephone_whatsapp) {
-            $message = $sansPreuve
-                ? 'Votre demande "' . $demande->motif . '" a été acceptée et clôturée sans justificatif (validation exceptionnelle).'
-                : 'Votre demande "' . $demande->motif . '" a été acceptée. Vous pouvez retirer les fonds.';
-
-            $whatsapp->envoyer($demande->user->telephone_whatsapp, $message);
+            $whatsapp->envoyer(
+                $demande->user->telephone_whatsapp,
+                'Votre demande "' . $demande->motif . '" a été acceptée. Vous pouvez retirer les fonds.'
+            );
         }
 
         return response()->json([
-            'message' => $sansPreuve ? 'Demande acceptée et clôturée sans preuve.' : 'Demande acceptée.',
+            'message' => 'Demande acceptée.',
+            'demande' => $demande->fresh('depense'),
+        ]);
+    }
+    public function validerSansPreuve(Request $request, Demande $demande, WhatsappService $whatsapp)
+    {
+        if ($demande->statut !== 'en_attente') {
+            return response()->json(['message' => 'Cette demande a déjà été traitée.'], 422);
+        }
+
+        $validated = $request->validate([
+            'caisse_id' => 'required|exists:caisses,id',
+            'commentaire_validation' => 'required|string|max:1000',
+        ]);
+
+        $caisse = Caisse::findOrFail($validated['caisse_id']);
+
+        if ($caisse->entreprise_id !== $demande->entreprise_id) {
+            return response()->json([
+                'message' => 'Cette caisse n\'appartient pas à l\'entreprise du demandeur.',
+            ], 422);
+        }
+
+        if ($caisse->solde < $demande->montant_estime) {
+            return response()->json([
+                'message' => 'Solde insuffisant dans cette caisse. Un emprunt inter-caisses est nécessaire avant de valider.',
+                'solde_disponible' => $caisse->solde,
+            ], 422);
+        }
+
+        DB::transaction(function () use ($demande, $caisse, $request, $validated) {
+            $demande->update([
+                'statut' => 'terminee',
+                'commentaire_validation' => $validated['commentaire_validation'],
+            ]);
+
+            Depense::create([
+                'demande_id' => $demande->id,
+                'caisse_id' => $caisse->id,
+                'montant_reel' => $demande->montant_estime,
+                'enregistre_par' => $request->user()->id,
+            ]);
+
+            $caisse->decrement('solde', $demande->montant_estime);
+        });
+
+        $demande->user->notify(new DemandeValideeNotification($demande));
+
+        if ($demande->user->telephone_whatsapp) {
+            $whatsapp->envoyer(
+                $demande->user->telephone_whatsapp,
+                'Votre demande "' . $demande->motif . '" a été acceptée et clôturée sans justificatif (validation exceptionnelle).'
+            );
+        }
+
+        return response()->json([
+            'message' => 'Demande acceptée et clôturée sans preuve.',
             'demande' => $demande->fresh('depense'),
         ]);
     }
