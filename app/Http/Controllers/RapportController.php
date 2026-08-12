@@ -65,38 +65,34 @@ class RapportController extends Controller
     // Export PDF des mouvements
     public function exporterPdf(Request $request)
     {
-        [$mouvements, $debut, $fin, $type] = $this->recupererMouvementsFiltres($request);
+        $donnees = json_decode($this->mouvements($request)->getContent(), true);
 
-        $pdf = Pdf::loadView('rapports.pdf', [
-            'mouvements' => $mouvements,
-            'periode' => ['debut' => $debut->toDateString(), 'fin' => $fin->toDateString()],
-            'typeMouvement' => $type,
-            'totalEntrees' => $mouvements->where('type', 'entree')->sum('montant'),
-            'totalSorties' => $mouvements->where('type', 'sortie')->sum('montant'),
-        ]);
+        $pdf = Pdf::loadView('rapports.mouvements-pdf', $donnees);
 
         return $pdf->download('rapport-ekash-' . now()->format('Y-m-d') . '.pdf');
     }
 
-    // Export Excel des mouvements
     public function exporterExcel(Request $request)
     {
-        [$mouvements] = $this->recupererMouvementsFiltres($request);
+        $donnees = json_decode($this->mouvements($request)->getContent(), true);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        $sheet->fromArray(['Date', 'Type', 'Catégorie', 'Caisse', 'Libellé', 'Montant'], null, 'A1');
+        $sheet->fromArray(
+            ['Date', 'Caisse', 'Type', 'Libellé', 'Montant (FCFA)'],
+            null,
+            'A1'
+        );
 
         $ligne = 2;
-        foreach ($mouvements as $m) {
+        foreach ($donnees['mouvements'] as $mvt) {
             $sheet->fromArray([
-                Carbon::parse($m['date'])->format('d/m/Y'),
-                ucfirst($m['type']),
-                $m['categorie'],
-                $m['caisse'],
-                $m['libelle'],
-                $m['montant'],
+                \Carbon\Carbon::parse($mvt['date'])->format('d/m/Y H:i'),
+                $mvt['caisse'],
+                $mvt['type'] === 'entree' ? 'Entrée' : 'Sortie',
+                $mvt['libelle'],
+                $mvt['type'] === 'entree' ? $mvt['montant'] : -$mvt['montant'],
             ], null, 'A' . $ligne);
             $ligne++;
         }
