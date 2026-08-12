@@ -179,7 +179,7 @@ class RapportController extends Controller
         $validated = $this->validerFiltres($request);
         [$debut, $fin] = $this->resoudrePeriode($validated);
 
-        $demandes = Demande::with(['user', 'depense', 'caisse.entreprise'])
+        $demandes = Demande::with(['user', 'depense', 'caisse'])
             ->whereBetween('created_at', [$debut, $fin])
             ->when($request->caisse_id, fn($q) => $q->where('caisse_id', $request->caisse_id))
             ->when($request->entreprise_id, fn($q) => $q->whereHas('caisse', fn($q2) => $q2->where('entreprise_id', $request->entreprise_id)))
