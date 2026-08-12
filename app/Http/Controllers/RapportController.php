@@ -31,23 +31,50 @@ class RapportController extends Controller
     }
 
     // Tableau de bord synthétique (dashboard superviseur)
-    public function tableauDeBord()
+    public function tableauDeBord(Request $request)
     {
+        $validated = $request->validate([
+            'periode' => 'nullable|in:jour,semaine,mois,personnalise',
+            'date_debut' => 'nullable|date',
+            'date_fin' => 'nullable|date|after_or_equal:date_debut',
+            'entreprise_id' => 'nullable|exists:entreprises,id',
+            'caisse_id' => 'nullable|exists:caisses,id',
+        ]);
+
+        [$debut, $fin] = $this->resoudrePeriode($validated);
+
         $caisses = Caisse::with('entreprise')->get();
 
-        $debutMois = Carbon::now()->startOfMonth();
-        $finMois = Carbon::now()->endOfMonth();
+        $depenses = Depense::whereBetween('date_depense', [$debut, $fin])
+            ->when($request->caisse_id, fn($q) => $q->where('caisse_id', $request->caisse_id))
+            ->when($request->entreprise_id, fn($q) => $q->whereHas('caisse', fn($q2) => $q2->where('entreprise_id', $request->entreprise_id)))
+            ->sum('montant_reel');
 
-        $depensesMois = Depense::whereBetween('date_depense', [$debutMois, $finMois])->get();
+        $approvisionnements = Approvisionnement::whereBetween('date_approvisionnement', [$debut, $fin])
+            ->when($request->caisse_id, fn($q) => $q->where('caisse_id', $request->caisse_id))
+            ->when($request->entreprise_id, fn($q) => $q->whereHas('caisse', fn($q2) => $q2->where('entreprise_id', $request->entreprise_id)))
+            ->sum('montant');
+
+        $empruntsRecus = Emprunt::whereBetween('date_emprunt', [$debut, $fin])
+            ->when($request->caisse_id, fn($q) => $q->where('caisse_emprunteuse_id', $request->caisse_id))
+            ->when($request->entreprise_id, fn($q) => $q->whereHas('caisseEmprunteuse', fn($q2) => $q2->where('entreprise_id', $request->entreprise_id)))
+            ->sum('montant');
+
+        $remboursementsRecus = Emprunt::whereNotNull('date_remboursement')
+            ->whereBetween('date_remboursement', [$debut, $fin])
+            ->when($request->caisse_id, fn($q) => $q->where('caisse_preteuse_id', $request->caisse_id))
+            ->when($request->entreprise_id, fn($q) => $q->whereHas('caissePreteuse', fn($q2) => $q2->where('entreprise_id', $request->entreprise_id)))
+            ->sum('montant');
 
         return response()->json([
+            'periode' => ['debut' => $debut->toDateString(), 'fin' => $fin->toDateString()],
             'caisses' => $caisses,
             'solde_total' => $caisses->sum('solde'),
-            'sorties_mois' => $depensesMois->sum('montant_reel'),
+            'sorties_periode' => $depenses,
             'en_attente_justification' => Demande::where('statut', 'acceptee')->count(),
+            'entrees_periode' => $approvisionnements + $empruntsRecus + $remboursementsRecus,
         ]);
     }
-
     // Export PDF
     public function exporterPdf(Request $request)
     {
