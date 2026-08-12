@@ -34,5 +34,12 @@ class UserSeeder extends Seeder
             'poste_id' => Poste::where('slug', 'technicien')->first()->id,
             'entreprise_id' => Entreprise::where('slug', 'da-digit-all')->first()->id,
         ]);
+        User::create([
+            'name' => 'Moussa',
+            'email' => 'moussa@greenpay.com',
+            'password' => bcrypt('password'),
+            'poste_id' => Poste::where('slug', 'directeur-général')->first()->id,
+            'entreprise_id' => Entreprise::where('slug', 'da-digit-all')->first()->id,
+        ]);
     }
 }
