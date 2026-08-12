@@ -15,7 +15,7 @@ use Carbon\Carbon;
 
 class RapportController extends Controller
 {
-    // Rapport principal avec filtres (demandes)
+    // Rapport principal avec filtres (liste des demandes)
     public function index(Request $request)
     {
         [$demandes, $debut, $fin] = $this->recupererDemandesFiltrees($request);
@@ -31,89 +31,72 @@ class RapportController extends Controller
     }
 
     // Tableau de bord synthétique (dashboard superviseur)
-    public function tableauDeBord(Request $request)
+    public function tableauDeBord()
     {
-        $validated = $request->validate([
-            'periode' => 'nullable|in:jour,semaine,mois,personnalise',
-            'date_debut' => 'nullable|date',
-            'date_fin' => 'nullable|date|after_or_equal:date_debut',
-            'entreprise_id' => 'nullable|exists:entreprises,id',
-            'caisse_id' => 'nullable|exists:caisses,id',
-        ]);
-
-        [$debut, $fin] = $this->resoudrePeriode($validated);
-
         $caisses = Caisse::with('entreprise')->get();
 
-        $depenses = Depense::whereBetween('date_depense', [$debut, $fin])
-            ->when($request->caisse_id, fn($q) => $q->where('caisse_id', $request->caisse_id))
-            ->when($request->entreprise_id, fn($q) => $q->whereHas('caisse', fn($q2) => $q2->where('entreprise_id', $request->entreprise_id)))
-            ->sum('montant_reel');
+        $debutMois = Carbon::now()->startOfMonth();
+        $finMois = Carbon::now()->endOfMonth();
 
-        $approvisionnements = Approvisionnement::whereBetween('date_approvisionnement', [$debut, $fin])
-            ->when($request->caisse_id, fn($q) => $q->where('caisse_id', $request->caisse_id))
-            ->when($request->entreprise_id, fn($q) => $q->whereHas('caisse', fn($q2) => $q2->where('entreprise_id', $request->entreprise_id)))
-            ->sum('montant');
-
-        $empruntsRecus = Emprunt::whereBetween('date_emprunt', [$debut, $fin])
-            ->when($request->caisse_id, fn($q) => $q->where('caisse_emprunteuse_id', $request->caisse_id))
-            ->when($request->entreprise_id, fn($q) => $q->whereHas('caisseEmprunteuse', fn($q2) => $q2->where('entreprise_id', $request->entreprise_id)))
-            ->sum('montant');
-
-        $remboursementsRecus = Emprunt::whereNotNull('date_remboursement')
-            ->whereBetween('date_remboursement', [$debut, $fin])
-            ->when($request->caisse_id, fn($q) => $q->where('caisse_preteuse_id', $request->caisse_id))
-            ->when($request->entreprise_id, fn($q) => $q->whereHas('caissePreteuse', fn($q2) => $q2->where('entreprise_id', $request->entreprise_id)))
-            ->sum('montant');
+        $depensesMois = Depense::whereBetween('date_depense', [$debutMois, $finMois])->get();
 
         return response()->json([
-            'periode' => ['debut' => $debut->toDateString(), 'fin' => $fin->toDateString()],
             'caisses' => $caisses,
             'solde_total' => $caisses->sum('solde'),
-            'sorties_periode' => $depenses,
+            'sorties_mois' => $depensesMois->sum('montant_reel'),
             'en_attente_justification' => Demande::where('statut', 'acceptee')->count(),
-            'entrees_periode' => $approvisionnements + $empruntsRecus + $remboursementsRecus,
         ]);
     }
-    // Export PDF
+
+    // Rapport des mouvements de caisse (entrées / sorties / tout)
+    public function mouvements(Request $request)
+    {
+        [$mouvements, $debut, $fin, $type] = $this->recupererMouvementsFiltres($request);
+
+        return response()->json([
+            'type_mouvement' => $type,
+            'periode' => ['debut' => $debut->toDateString(), 'fin' => $fin->toDateString()],
+            'total_entrees' => $mouvements->where('type', 'entree')->sum('montant'),
+            'total_sorties' => $mouvements->where('type', 'sortie')->sum('montant'),
+            'mouvements' => $mouvements,
+        ]);
+    }
+
+    // Export PDF des mouvements
     public function exporterPdf(Request $request)
     {
-        [$demandes, $debut, $fin] = $this->recupererDemandesFiltrees($request);
+        [$mouvements, $debut, $fin, $type] = $this->recupererMouvementsFiltres($request);
 
         $pdf = Pdf::loadView('rapports.pdf', [
-            'demandes' => $demandes,
+            'mouvements' => $mouvements,
             'periode' => ['debut' => $debut->toDateString(), 'fin' => $fin->toDateString()],
-            'totalEstime' => $demandes->sum('montant_estime'),
-            'totalReel' => $demandes->sum(fn($d) => $d->depense?->montant_reel ?? 0),
+            'typeMouvement' => $type,
+            'totalEntrees' => $mouvements->where('type', 'entree')->sum('montant'),
+            'totalSorties' => $mouvements->where('type', 'sortie')->sum('montant'),
         ]);
 
         return $pdf->download('rapport-ekash-' . now()->format('Y-m-d') . '.pdf');
     }
 
-    // Export Excel (via PhpSpreadsheet direct, sans maatwebsite/excel)
+    // Export Excel des mouvements
     public function exporterExcel(Request $request)
     {
-        [$demandes] = $this->recupererDemandesFiltrees($request);
+        [$mouvements] = $this->recupererMouvementsFiltres($request);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        $sheet->fromArray(
-            ['Date', 'Demandeur', 'Entreprise', 'Motif', 'Montant estimé', 'Montant réel', 'Statut'],
-            null,
-            'A1'
-        );
+        $sheet->fromArray(['Date', 'Type', 'Catégorie', 'Caisse', 'Libellé', 'Montant'], null, 'A1');
 
         $ligne = 2;
-        foreach ($demandes as $demande) {
+        foreach ($mouvements as $m) {
             $sheet->fromArray([
-                $demande->created_at->format('d/m/Y'),
-                $demande->user->name,
-                $demande->entreprise->nom,
-                $demande->motif,
-                $demande->montant_estime,
-                $demande->depense?->montant_reel ?? '',
-                ucfirst($demande->statut),
+                Carbon::parse($m['date'])->format('d/m/Y'),
+                ucfirst($m['type']),
+                $m['categorie'],
+                $m['caisse'],
+                $m['libelle'],
+                $m['montant'],
             ], null, 'A' . $ligne);
             $ligne++;
         }
@@ -127,8 +110,40 @@ class RapportController extends Controller
         return response()->download($cheminTemp)->deleteFileAfterSend(true);
     }
 
-    // Rapport des mouvements de caisse (entrées / sorties / tout)
-    public function mouvements(Request $request)
+    // --- Méthodes privées communes ---
+
+    private function recupererDemandesFiltrees(Request $request)
+    {
+        $validated = $request->validate([
+            'periode' => 'nullable|in:jour,semaine,mois,personnalise',
+            'date_debut' => 'nullable|date',
+            'date_fin' => 'nullable|date|after_or_equal:date_debut',
+            'entreprise_id' => 'nullable|exists:entreprises,id',
+            'user_id' => 'nullable|exists:users,id',
+            'statut' => 'nullable|in:en_attente,acceptee,rejetee,preuve_envoyee,terminee,preuve_rejetee',
+        ]);
+
+        [$debut, $fin] = $this->resoudrePeriode($validated);
+
+        $query = Demande::with('user', 'entreprise', 'depense')
+            ->whereBetween('created_at', [$debut, $fin]);
+
+        if (!empty($validated['entreprise_id'])) {
+            $query->where('entreprise_id', $validated['entreprise_id']);
+        }
+
+        if (!empty($validated['user_id'])) {
+            $query->where('user_id', $validated['user_id']);
+        }
+
+        if (!empty($validated['statut'])) {
+            $query->where('statut', $validated['statut']);
+        }
+
+        return [$query->latest()->get(), $debut, $fin];
+    }
+
+    private function recupererMouvementsFiltres(Request $request): array
     {
         $validated = $request->validate([
             'type_mouvement' => 'nullable|in:entrees,sorties,tout',
@@ -240,46 +255,7 @@ class RapportController extends Controller
 
         $mouvements = $mouvements->sortByDesc('date')->values();
 
-        return response()->json([
-            'type_mouvement' => $type,
-            'periode' => ['debut' => $debut->toDateString(), 'fin' => $fin->toDateString()],
-            'total_entrees' => $mouvements->where('type', 'entree')->sum('montant'),
-            'total_sorties' => $mouvements->where('type', 'sortie')->sum('montant'),
-            'mouvements' => $mouvements,
-        ]);
-    }
-
-    // --- Méthodes privées communes ---
-
-    private function recupererDemandesFiltrees(Request $request)
-    {
-        $validated = $request->validate([
-            'periode' => 'nullable|in:jour,semaine,mois,personnalise',
-            'date_debut' => 'nullable|date',
-            'date_fin' => 'nullable|date|after_or_equal:date_debut',
-            'entreprise_id' => 'nullable|exists:entreprises,id',
-            'user_id' => 'nullable|exists:users,id',
-            'statut' => 'nullable|in:en_attente,acceptee,rejetee,preuve_envoyee,terminee,preuve_rejetee',
-        ]);
-
-        [$debut, $fin] = $this->resoudrePeriode($validated);
-
-        $query = Demande::with('user', 'entreprise', 'depense')
-            ->whereBetween('created_at', [$debut, $fin]);
-
-        if (!empty($validated['entreprise_id'])) {
-            $query->where('entreprise_id', $validated['entreprise_id']);
-        }
-
-        if (!empty($validated['user_id'])) {
-            $query->where('user_id', $validated['user_id']);
-        }
-
-        if (!empty($validated['statut'])) {
-            $query->where('statut', $validated['statut']);
-        }
-
-        return [$query->latest()->get(), $debut, $fin];
+        return [$mouvements, $debut, $fin, $type];
     }
 
     private function resoudrePeriode(array $validated): array
