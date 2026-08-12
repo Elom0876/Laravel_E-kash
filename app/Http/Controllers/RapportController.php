@@ -10,6 +10,8 @@ use App\Exports\RapportExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
+use App\Models\Approvisionnement;
+use App\Models\Emprunt;
 
 class RapportController extends Controller
 {
@@ -38,9 +40,18 @@ class RapportController extends Controller
 
         $depensesMois = Depense::whereBetween('date_depense', [$debutMois, $finMois])->get();
 
+        $approvisionnementsMois = Approvisionnement::whereBetween('created_at', [$debutMois, $finMois])
+            ->sum('montant');
+
+        $empruntsMois = Emprunt::whereBetween('date_emprunt', [$debutMois, $finMois])
+            ->sum('montant');
+
+        $entreesMois = $approvisionnementsMois + $empruntsMois;
+
         return response()->json([
             'caisses' => $caisses,
             'solde_total' => $caisses->sum('solde'),
+            'entrees_mois' => $entreesMois,
             'sorties_mois' => $depensesMois->sum('montant_reel'),
             'en_attente_justification' => Demande::where('statut', 'validee')->count(),
         ]);
