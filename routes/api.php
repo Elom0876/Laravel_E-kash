@@ -42,10 +42,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/demandes/historique', [DemandeController::class, 'historique']);
     });
 
-    // Réservé au superviseur / direction (+ gestionnaire pour les rapports)
-    Route::middleware('role:superviseur,gestionnaire')->group(function () {
-        Route::get('/rapports', [RapportController::class, 'index']);
-    });
     Route::middleware('role:superviseur,gestionnaire')->group(function () {
         Route::get('/emprunts', [EmpruntController::class, 'index']);
         Route::post('/emprunts', [EmpruntController::class, 'store']);
