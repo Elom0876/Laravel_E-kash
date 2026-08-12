@@ -58,12 +58,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/caisses/{caisse}', [CaisseController::class, 'show']);
         Route::get('/demandes/historique', [DemandeController::class, 'historique']);
     });
+
     Route::middleware('role:superviseur,gestionnaire')->group(function () {
-        Route::get('/rapports', [RapportController::class, 'index']);
-        Route::get('/rapports/tableau-de-bord', [RapportController::class, 'tableauDeBord']);
-    });
-    Route::middleware('role:superviseur,gestionnaire')->group(function () {
-        Route::get('/rapports', [RapportController::class, 'index']);
+        Route::get('/rapports/mouvements', [RapportController::class, 'mouvements']);
         Route::get('/rapports/tableau-de-bord', [RapportController::class, 'tableauDeBord']);
         Route::get('/rapports/export/pdf', [RapportController::class, 'exporterPdf']);
         Route::get('/rapports/export/excel', [RapportController::class, 'exporterExcel']);
