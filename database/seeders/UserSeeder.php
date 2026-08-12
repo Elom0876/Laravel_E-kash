@@ -36,8 +36,8 @@ class UserSeeder extends Seeder
         ]);
         User::create([
             'name' => 'Moussa',
-            'email' => 'moussa@greenpay.com',
-            'password' => bcrypt('password'),
+            'email' => 'directeur@gmail.com',
+            'password' => bcrypt('123456'),
             'poste_id' => Poste::where('slug', 'directeur-général')->first()->id,
             'entreprise_id' => Entreprise::where('slug', 'da-digit-all')->first()->id,
         ]);
