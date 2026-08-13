@@ -22,10 +22,10 @@ class ReinitialisationMotDePasseNotification extends Notification
         $url = rtrim(config('app.frontend_url'), '/') . '/definir-mot-de-passe?token=' . $this->token . '&email=' . urlencode($notifiable->email);
 
         return (new MailMessage)
-            ->subject('Définissez votre nouveau mot de passe — E-kash')
+            ->subject('Définissez votre mot de passe — E-kash')
             ->greeting('Bonjour ' . $notifiable->name)
-            ->line('Cliquez sur le bouton ci-dessous pour définir votre nouveau mot de passe.')
-            ->action('Définir mon nouveau mot de passe', $url)
+            ->line('Cliquez sur le bouton ci-dessous pour définir votre mot de passe.')
+            ->action('Définir mon mot de passe', $url)
             ->line('Ce lien expire dans 60 minutes.');
     }
 }
