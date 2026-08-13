@@ -8,7 +8,7 @@ class PosteController extends Controller
 {
     public function index()
     {
-        $postes = Poste::where('role', 'demandeur', 'gestionnaire', 'superviseur')
+        $postes = Poste::whereIn('role', ['demandeur', 'gestionnaire', 'superviseur'])
             ->orderBy('nom')
             ->get();
 
