@@ -39,5 +39,19 @@ class UserController extends Controller
             'user' => $user,
         ], 201);
     }
+    public function index(Request $request)
+    {
+        $users = User::with(['entreprise', 'poste'])
+            ->when(
+                $request->entreprise_id,
+                fn($query) =>
+                $query->where('entreprise_id', $request->entreprise_id)
+            )
+            ->latest()
+            ->get();
 
+        return response()->json([
+            'users' => $users,
+        ]);
+    }
 }

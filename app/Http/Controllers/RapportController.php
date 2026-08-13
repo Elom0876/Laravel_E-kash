@@ -65,34 +65,38 @@ class RapportController extends Controller
     // Export PDF des mouvements
     public function exporterPdf(Request $request)
     {
-        $donnees = json_decode($this->mouvements($request)->getContent(), true);
+        [$mouvements, $debut, $fin, $type] = $this->recupererMouvementsFiltres($request);
 
-        $pdf = Pdf::loadView('rapports.mouvements-pdf', $donnees);
+        $pdf = Pdf::loadView('rapports.pdf', [
+            'mouvements' => $mouvements,
+            'periode' => ['debut' => $debut->toDateString(), 'fin' => $fin->toDateString()],
+            'typeMouvement' => $type,
+            'totalEntrees' => $mouvements->where('type', 'entree')->sum('montant'),
+            'totalSorties' => $mouvements->where('type', 'sortie')->sum('montant'),
+        ]);
 
         return $pdf->download('rapport-ekash-' . now()->format('Y-m-d') . '.pdf');
     }
 
+    // Export Excel des mouvements
     public function exporterExcel(Request $request)
     {
-        $donnees = json_decode($this->mouvements($request)->getContent(), true);
+        [$mouvements] = $this->recupererMouvementsFiltres($request);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        $sheet->fromArray(
-            ['Date', 'Caisse', 'Type', 'Libellé', 'Montant (FCFA)'],
-            null,
-            'A1'
-        );
+        $sheet->fromArray(['Date', 'Type', 'Catégorie', 'Caisse', 'Libellé', 'Montant'], null, 'A1');
 
         $ligne = 2;
-        foreach ($donnees['mouvements'] as $mvt) {
+        foreach ($mouvements as $m) {
             $sheet->fromArray([
-                \Carbon\Carbon::parse($mvt['date'])->format('d/m/Y H:i'),
-                $mvt['caisse'],
-                $mvt['type'] === 'entree' ? 'Entrée' : 'Sortie',
-                $mvt['libelle'],
-                $mvt['type'] === 'entree' ? $mvt['montant'] : -$mvt['montant'],
+                Carbon::parse($m['date'])->format('d/m/Y'),
+                ucfirst($m['type']),
+                $m['categorie'],
+                $m['caisse'],
+                $m['libelle'],
+                $m['montant'],
             ], null, 'A' . $ligne);
             $ligne++;
         }
