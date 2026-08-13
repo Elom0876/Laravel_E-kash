@@ -66,6 +66,16 @@ class EmpruntController extends Controller
             return response()->json(['message' => 'Cet emprunt est déjà remboursé.'], 422);
         }
 
+        $caisseEmprunteuse = $emprunt->caisseEmprunteuse;
+
+        if ($caisseEmprunteuse->solde < $emprunt->montant) {
+            return response()->json([
+                'message' => 'Solde insuffisant dans la caisse emprunteuse pour rembourser cet emprunt.',
+                'solde_disponible' => $caisseEmprunteuse->solde,
+                'montant_a_rembourser' => $emprunt->montant,
+            ], 422);
+        }
+
         DB::transaction(function () use ($emprunt) {
             $emprunt->caisseEmprunteuse->decrement('solde', $emprunt->montant);
             $emprunt->caissePreteuse->increment('solde', $emprunt->montant);
