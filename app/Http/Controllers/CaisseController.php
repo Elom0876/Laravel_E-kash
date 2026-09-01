@@ -58,6 +58,19 @@ class CaisseController extends Controller
         $validated = $request->validate([
             'montant' => 'required|numeric|min:1',
             'motif' => 'nullable|string|max:255',
+            'source_type' => 'required|in:directe,indirecte',
+
+            // Obligatoire uniquement si source directe (virement bancaire)
+            'compte_bancaire' => 'required_if:source_type,directe|nullable|string|max:255',
+
+            // Obligatoire uniquement si source indirecte (personnel)
+            'mode_reglement' => 'required_if:source_type,indirecte|nullable|in:cheque,espece',
+
+            // Obligatoire uniquement si mode = chèque
+            'numero_cheque' => 'required_if:mode_reglement,cheque|nullable|string|max:100',
+
+            // Obligatoire uniquement si mode = espèces
+            'depose_par' => 'required_if:mode_reglement,espece|nullable|string|max:255',
         ]);
 
         DB::transaction(function () use ($caisse, $validated, $request) {
@@ -67,6 +80,11 @@ class CaisseController extends Controller
                 'motif' => $validated['motif'] ?? null,
                 'enregistre_par' => $request->user()->id,
                 'date_approvisionnement' => now(),
+                'source_type' => $validated['source_type'],
+                'compte_bancaire' => $validated['compte_bancaire'] ?? null,
+                'mode_reglement' => $validated['mode_reglement'] ?? null,
+                'numero_cheque' => $validated['numero_cheque'] ?? null,
+                'depose_par' => $validated['depose_par'] ?? null,
             ]);
 
             $caisse->increment('solde', $validated['montant']);

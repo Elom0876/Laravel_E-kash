@@ -47,6 +47,22 @@ class RapportController extends Controller
             'en_attente_justification' => Demande::where('statut', 'acceptee')->count(),
         ]);
     }
+    private function construireDetailSource(Approvisionnement $a): ?string
+    {
+        if ($a->source_type === 'directe') {
+            return 'Virement bancaire (' . $a->compte_bancaire . ')';
+        }
+
+        if ($a->mode_reglement === 'cheque') {
+            return 'Chèque n°' . $a->numero_cheque;
+        }
+
+        if ($a->mode_reglement === 'espece') {
+            return 'Espèces déposées par ' . $a->depose_par;
+        }
+
+        return null;
+    }
 
     // Rapport des mouvements de caisse (entrées / sorties / tout)
     public function mouvements(Request $request)
@@ -86,7 +102,7 @@ class RapportController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        $sheet->fromArray(['Date', 'Type', 'Catégorie', 'Caisse', 'Libellé', 'Montant'], null, 'A1');
+        $sheet->fromArray(['Date', 'Type', 'Catégorie', 'Caisse', 'Libellé', 'Source', 'Détail source', 'Montant'], null, 'A1');
 
         $ligne = 2;
         foreach ($mouvements as $m) {
@@ -96,6 +112,8 @@ class RapportController extends Controller
                 $m['categorie'],
                 $m['caisse'],
                 $m['libelle'],
+                $m['source_type'] ? ucfirst($m['source_type']) : '',
+                $m['detail_source'] ?? '',
                 $m['montant'],
             ], null, 'A' . $ligne);
             $ligne++;
@@ -172,6 +190,8 @@ class RapportController extends Controller
                     'caisse' => $d->caisse->nom,
                     'montant' => $d->montant_reel,
                     'libelle' => $d->demande->motif . ' — ' . $d->demande->user->name,
+                    'source_type' => null,
+                    'detail_source' => null,
                 ]);
 
             $empruntsDonnes = Emprunt::with('caissePreteuse.entreprise', 'caisseEmprunteuse')
@@ -186,6 +206,8 @@ class RapportController extends Controller
                     'caisse' => $e->caissePreteuse->nom,
                     'montant' => $e->montant,
                     'libelle' => 'Emprunt vers ' . $e->caisseEmprunteuse->nom . ' — ' . $e->motif,
+                    'source_type' => null,
+                    'detail_source' => null,
                 ]);
 
             $remboursementsPayes = Emprunt::with('caisseEmprunteuse.entreprise', 'caissePreteuse')
@@ -201,6 +223,8 @@ class RapportController extends Controller
                     'caisse' => $e->caisseEmprunteuse->nom,
                     'montant' => $e->montant,
                     'libelle' => 'Remboursement à ' . $e->caissePreteuse->nom,
+                    'source_type' => null,
+                    'detail_source' => null,
                 ]);
 
             $mouvements = $mouvements->merge($depenses)->merge($empruntsDonnes)->merge($remboursementsPayes);
@@ -219,8 +243,9 @@ class RapportController extends Controller
                     'caisse' => $a->caisse->nom,
                     'montant' => $a->montant,
                     'libelle' => $a->motif ?? 'Approvisionnement',
+                    'source_type' => $a->source_type,
+                    'detail_source' => $this->construireDetailSource($a),
                 ]);
-
             $empruntsRecus = Emprunt::with('caisseEmprunteuse.entreprise', 'caissePreteuse')
                 ->whereBetween('date_emprunt', [$debut, $fin])
                 ->when($request->caisse_id, fn($q) => $q->where('caisse_emprunteuse_id', $request->caisse_id))
@@ -233,6 +258,8 @@ class RapportController extends Controller
                     'caisse' => $e->caisseEmprunteuse->nom,
                     'montant' => $e->montant,
                     'libelle' => 'Emprunt reçu de ' . $e->caissePreteuse->nom . ' — ' . $e->motif,
+                    'source_type' => null,
+                    'detail_source' => null,
                 ]);
 
             $remboursementsRecus = Emprunt::with('caissePreteuse.entreprise', 'caisseEmprunteuse')
@@ -248,6 +275,8 @@ class RapportController extends Controller
                     'caisse' => $e->caissePreteuse->nom,
                     'montant' => $e->montant,
                     'libelle' => 'Remboursement de ' . $e->caisseEmprunteuse->nom,
+                    'source_type' => null,
+                    'detail_source' => null,
                 ]);
 
             $mouvements = $mouvements->merge($approvisionnements)->merge($empruntsRecus)->merge($remboursementsRecus);

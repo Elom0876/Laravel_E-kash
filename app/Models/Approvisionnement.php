@@ -17,6 +17,11 @@ class Approvisionnement extends Model
         'motif',
         'enregistre_par',
         'date_approvisionnement',
+        'source_type',
+        'compte_bancaire',
+        'mode_reglement',
+        'numero_cheque',
+        'depose_par',
     ];
 
     protected $casts = [
